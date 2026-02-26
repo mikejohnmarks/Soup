@@ -179,14 +179,14 @@ function render() {
                 </div>
 
                 <textarea class="soup" placeholder="Soup...">${item.soup}</textarea>
-                <textarea placeholder="Add note...">${item.note}</textarea>
+                <textarea class="note" placeholder="Add note...">${item.note}</textarea>
 
                 <div class="handle">☰</div>
             </div>
         `;
 
         
-        const textarea = div.querySelector("textarea");
+        const textarea = div.querySelector(".note");
 
         const soupTextarea = div.querySelector(".soup");
 
