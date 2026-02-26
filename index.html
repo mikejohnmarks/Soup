@@ -115,6 +115,17 @@
     .dragging {
         opacity: 0.5;
     }
+	.delete-btn {
+    background: transparent;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    opacity: 0.5;
+}
+
+.delete-btn:hover {
+    opacity: 1;
+}
 </style>
 </head>
 
@@ -122,6 +133,12 @@
 
 <h1>Southside Soup Contest</h1>
 <div id="list"></div>
+<div style="display:flex; gap:10px; margin-bottom:15px; margin-top: 15px;">
+    <input id="newRestaurantInput" type="text" placeholder="New restaurant name..." style="flex:1;">
+    <button id="addRestaurantBtn">➕ Add</button>
+	<button id="resetBtn">🔄 Reset</button>
+</div>
+
 
 <script>
 const defaultData = [
@@ -159,7 +176,7 @@ const list = document.getElementById("list");
 
 function render() {
     list.innerHTML = "";
-
+/*<button class="delete-btn">🗑</button>*/
     data.forEach((item, index) => {
         const div = document.createElement("div");
         div.className = "item";
@@ -180,12 +197,14 @@ function render() {
                         <span class="emoji veggie ${item.veggie ? 'selected' : ''}">🥦</span>
 						<span class="emoji unique ${item.unique ? 'selected' : ''}">⭐</span>
                     </div>
+					
                 </div>
 
                 <textarea class="soup" placeholder="Soup...">${item.soup}</textarea>
                 <textarea class="note" placeholder="Add note...">${item.note}</textarea>
 
                 <div class="handle">☰</div>
+				
             </div>
         `;
 
@@ -207,6 +226,22 @@ function render() {
         });
 
         autoResize(textarea);
+		/*
+		div.querySelector(".delete-btn").addEventListener("click", () => {
+    const confirmed = confirm(`Delete "${item.name}"?`);
+    if (!confirmed) return;
+
+    // Remove veggie/unique if needed
+    if (item.veggie) item.veggie = false;
+    if (item.unique) item.unique = false;
+
+    data.splice(index, 1);
+
+    saveData();
+    render();
+});*/
+
+
 
         // Veggie logic
 		div.querySelector(".veggie").addEventListener("click", () => {
@@ -244,6 +279,8 @@ function render() {
 
         list.appendChild(div);
     });
+	
+	
 }
 
 function autoResize(el) {
@@ -284,6 +321,50 @@ list.addEventListener("drop", () => {
     saveData();
     render();
 });
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+    const confirmed = confirm("Restore original restaurant list? This will erase current rankings.");
+    if (!confirmed) return;
+
+    data = defaultData.map(item => ({
+        name: item.name,
+        soup: "",
+        note: "",
+        veggie: false,
+        unique: false
+    }));
+
+    saveData();
+    render();
+});
+
+const newRestaurantInput = document.getElementById("newRestaurantInput");
+const addRestaurantBtn = document.getElementById("addRestaurantBtn");
+
+addRestaurantBtn.addEventListener("click", addRestaurant);
+
+newRestaurantInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+        addRestaurant();
+    }
+});
+
+function addRestaurant() {
+    const name = newRestaurantInput.value.trim();
+    if (!name) return;
+
+    data.push({
+        name,
+        soup: "",
+        note: "",
+        veggie: false,
+        unique: false
+    });
+
+    newRestaurantInput.value = "";
+    saveData();
+    render();
+}
 
 function saveData() {
     localStorage.setItem("restaurantData", JSON.stringify({
