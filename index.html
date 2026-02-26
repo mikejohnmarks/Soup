@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reorder List App</title>
+<title>Southside Soup Contest</title>
 
 <style>
     body {
@@ -25,24 +25,32 @@
     }
 
     .item {
+        display: flex;
+        align-items: stretch;
         background: white;
-        padding: 15px;
         border-radius: 12px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
+        overflow: hidden;
         touch-action: none;
         transition: background 0.2s ease;
     }
 
-    .item.first {
-        background: linear-gradient(135deg, #ffd700, #ffec8b);
-        border: 2px solid #e6c200;
+    .rank {
+        width: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 16px;
+        background: #eaeaea;
     }
 
-    .item.dragging {
-        opacity: 0.5;
+    .content {
+        flex: 1;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
     }
 
     .title {
@@ -51,10 +59,6 @@
         display: flex;
         align-items: center;
         gap: 6px;
-    }
-
-    .crown {
-        font-size: 18px;
     }
 
     input {
@@ -72,12 +76,26 @@
         align-self: flex-end;
         opacity: 0.5;
     }
+
+    /* Medal styles */
+    .gold { background: linear-gradient(135deg, #ffd700, #ffec8b); }
+    .silver { background: linear-gradient(135deg, #cfd2d6, #f0f0f0); }
+    .bronze { background: linear-gradient(135deg, #cd7f32, #e6b17e); }
+
+    .gold .rank { background: #e6c200; }
+    .silver .rank { background: #bfc3c7; }
+    .bronze .rank { background: #b87333; }
+
+    .dragging {
+        opacity: 0.5;
+    }
+
 </style>
 </head>
 
 <body>
 
-<h1>Reorderable Restaurant List</h1>
+<h1>South Side Soup Contest</h1>
 <div id="list"></div>
 
 <script>
@@ -104,7 +122,6 @@ const defaultData = [
 ].map(name => ({ name, note: "" }));
 
 let data = JSON.parse(localStorage.getItem("restaurantData")) || defaultData;
-
 const list = document.getElementById("list");
 
 function render() {
@@ -113,18 +130,24 @@ function render() {
     data.forEach((item, index) => {
         const div = document.createElement("div");
         div.className = "item";
-        if (index === 0) div.classList.add("first");
+
+        if (index === 0) div.classList.add("gold");
+        else if (index === 1) div.classList.add("silver");
+        else if (index === 2) div.classList.add("bronze");
 
         div.draggable = true;
         div.dataset.index = index;
 
         div.innerHTML = `
-            <div class="title">
-                ${index === 0 ? '<span class="crown">👑</span>' : ''}
-                ${item.name}
+            <div class="rank">${index + 1}</div>
+            <div class="content">
+                <div class="title">
+                    ${index === 0 ? '👑 ' : ''}
+                    ${item.name}
+                </div>
+                <input type="text" placeholder="Add note..." value="${item.note}">
+                <div class="handle">☰</div>
             </div>
-            <input type="text" placeholder="Add note..." value="${item.note}">
-            <div class="handle">☰</div>
         `;
 
         const input = div.querySelector("input");
@@ -185,9 +208,7 @@ function saveData() {
     localStorage.setItem("restaurantData", JSON.stringify(data));
 }
 
-// Auto save every minute
 setInterval(saveData, 60000);
-
 render();
 </script>
 
