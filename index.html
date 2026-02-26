@@ -81,16 +81,19 @@
         transform: scale(1.2);
     }
 
-    textarea {
+    input, textarea {
         padding: 8px;
         border-radius: 8px;
         border: 1px solid #ccc;
         font-size: 14px;
         width: 100%;
         box-sizing: border-box;
+        font-family: inherit;
+    }
+
+    textarea {
         resize: none;
         min-height: 38px;
-        font-family: inherit;
         overflow: hidden;
     }
 
@@ -101,7 +104,6 @@
         opacity: 0.5;
     }
 
-    /* Medal styles */
     .gold { background: linear-gradient(135deg, #ffd700, #ffec8b); }
     .silver { background: linear-gradient(135deg, #cfd2d6, #f0f0f0); }
     .bronze { background: linear-gradient(135deg, #cd7f32, #e6b17e); }
@@ -142,10 +144,9 @@ const defaultData = [
 "The Speckled Egg",
 "Burghers Brewing",
 "The Fluted Mushroom"
-].map(name => ({ name, note: "" }));
+].map(name => ({ name, soup: "", note: "" }));
 
 let saved = JSON.parse(localStorage.getItem("restaurantData"));
-
 let data = saved?.data || defaultData;
 let veggieIndex = saved?.veggieIndex ?? null;
 let uniqueIndex = saved?.uniqueIndex ?? null;
@@ -176,12 +177,26 @@ function render() {
                         <span class="emoji unique ${uniqueIndex === index ? 'selected' : ''}">⭐</span>
                     </div>
                 </div>
+
+                <textarea class="soup" placeholder="Soup...">${item.soup}</textarea>
                 <textarea placeholder="Add note...">${item.note}</textarea>
+
                 <div class="handle">☰</div>
             </div>
         `;
 
+        
         const textarea = div.querySelector("textarea");
+
+        const soupTextarea = div.querySelector(".soup");
+
+		soupTextarea.addEventListener("input", (e) => {
+			data[index].soup = e.target.value;
+			autoResize(soupTextarea);
+		});
+
+		autoResize(soupTextarea);
+
         textarea.addEventListener("input", (e) => {
             data[index].note = e.target.value;
             autoResize(textarea);
@@ -189,7 +204,6 @@ function render() {
 
         autoResize(textarea);
 
-        // Emoji logic
         div.querySelector(".veggie").addEventListener("click", () => {
             veggieIndex = veggieIndex === index ? null : index;
             saveData();
@@ -247,11 +261,6 @@ list.addEventListener("drop", () => {
     );
 
     data = newOrder;
-
-    // Update emoji indexes after reorder
-    veggieIndex = data.findIndex((_, i) => i === veggieIndex);
-    uniqueIndex = data.findIndex((_, i) => i === uniqueIndex);
-
     saveData();
     render();
 });
