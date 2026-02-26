@@ -145,16 +145,16 @@ const defaultData = [
 "Café du Jour",
 "St. John the Baptist Ukrainian Catholic Church",
 "Twelve Whiskey Barbecue",
-"Mario’s South Side Saloon",
+"Mario's South Side Saloon",
 "Bedford House PGH",
 "Sushi Tomo",
-"Carmella’s Plates & Pints",
-"Lin’s Asian Fusion",
+"Carmella's Plates & Pints",
+"Lin's Asian Fusion",
 "Le Petit Café & Grille",
 "La Palapa",
 "Cold Friends Kitchen",
 "Dive Bar & Grille",
-"Piper’s Pub",
+"Piper's Pub",
 "La Dolce Vita",
 "Thai Me Up",
 "The Library on Carson",
@@ -174,53 +174,8 @@ let data = (saved?.data || defaultData).map(item => ({
 
 const list = document.getElementById("list");
 
-let autoScrollInterval = null;
-
-function enableAutoScroll(container) {
-console.log("enabling");
-    container.addEventListener("dragover", (e) => {
-        const threshold = 80; // px from top/bottom
-        const scrollSpeed = 8; // speed
-
-        const rect = container.getBoundingClientRect();
-        const y = e.clientY;
-
-        // Near top
-        if (y < rect.top + threshold) {
-            startScrolling(container, -scrollSpeed);
-        }
-        // Near bottom
-        else if (y > rect.bottom - threshold) {
-            startScrolling(container, scrollSpeed);
-        }
-        else {
-            stopScrolling();
-        }
-    });
-
-    container.addEventListener("dragleave", stopScrolling);
-    container.addEventListener("drop", stopScrolling);
-    container.addEventListener("dragend", stopScrolling);
-}
-
-function startScrolling(container, speed) {
-console.log("scrolling");
-    if (autoScrollInterval) return;
-
-    autoScrollInterval = setInterval(() => {
-        container.scrollTop += speed;
-    }, 16); // ~60fps
-}
-
-function stopScrolling() {
-console.log("stopping");
-    clearInterval(autoScrollInterval);
-    autoScrollInterval = null;
-}
-
 function render() {
     list.innerHTML = "";
-/*<button class="delete-btn">🗑</button>*/
     data.forEach((item, index) => {
         const div = document.createElement("div");
         div.className = "item";
@@ -270,33 +225,12 @@ function render() {
         });
 
         autoResize(textarea);
-		/*
-		div.querySelector(".delete-btn").addEventListener("click", () => {
-    const confirmed = confirm(`Delete "${item.name}"?`);
-    if (!confirmed) return;
-
-    // Remove veggie/unique if needed
-    if (item.veggie) item.veggie = false;
-    if (item.unique) item.unique = false;
-
-    data.splice(index, 1);
-
-    saveData();
-    render();
-});*/
-
-
 
         // Veggie logic
 		div.querySelector(".veggie").addEventListener("click", () => {
 			const isSelected = item.veggie;
-
-			// Clear veggie from all
 			data.forEach(d => d.veggie = false);
-
-			// Toggle current
 			item.veggie = !isSelected;
-
 			saveData();
 			render();
 		});
@@ -304,13 +238,8 @@ function render() {
 		// Unique logic
 		div.querySelector(".unique").addEventListener("click", () => {
 			const isSelected = item.unique;
-
-			// Clear unique from all
 			data.forEach(d => d.unique = false);
-
-			// Toggle current
 			item.unique = !isSelected;
-
 			saveData();
 			render();
 		});
@@ -323,8 +252,6 @@ function render() {
 
         list.appendChild(div);
     });
-	
-	
 }
 
 function autoResize(el) {
@@ -414,6 +341,150 @@ function saveData() {
     localStorage.setItem("restaurantData", JSON.stringify({
         data
     }));
+}
+
+// Auto-scroll during drag: scrolls the page when dragging near the top or bottom edge
+function enableAutoScroll(container) {
+    const SCROLL_ZONE = 80;   // px from edge that triggers scrolling
+    const MAX_SPEED   = 18;   // max px per animation frame
+    let scrollInterval = null;
+
+    function getScrollSpeed(clientY) {
+        const vh = window.innerHeight;
+        if (clientY < SCROLL_ZONE) {
+            // Near top — scroll up; closer to edge = faster
+            return -Math.round(MAX_SPEED * (1 - clientY / SCROLL_ZONE));
+        } else if (clientY > vh - SCROLL_ZONE) {
+            // Near bottom — scroll down
+            return Math.round(MAX_SPEED * (1 - (vh - clientY) / SCROLL_ZONE));
+        }
+        return 0;
+    }
+
+    function stopScroll() {
+        if (scrollInterval) {
+            cancelAnimationFrame(scrollInterval);
+            scrollInterval = null;
+        }
+    }
+
+    // Mouse drag support
+    document.addEventListener("dragover", (e) => {
+        const speed = getScrollSpeed(e.clientY);
+        stopScroll();
+        if (speed !== 0) {
+            function step() {
+                window.scrollBy(0, speed);
+                scrollInterval = requestAnimationFrame(step);
+            }
+            scrollInterval = requestAnimationFrame(step);
+        }
+    });
+
+    document.addEventListener("dragend", stopScroll);
+    document.addEventListener("drop", stopScroll);
+
+    // Touch drag support (for mobile)
+    let touchDragging = null;
+    let touchClone = null;
+    let touchOriginIndex = null;
+
+    container.addEventListener("touchstart", (e) => {
+        const handle = e.target.closest(".handle");
+        if (!handle) return;
+
+        const item = e.target.closest(".item");
+        if (!item) return;
+
+        e.preventDefault();
+        touchDragging = item;
+        touchOriginIndex = parseInt(item.dataset.index);
+
+        // Create a visual clone that follows the finger
+        touchClone = item.cloneNode(true);
+        touchClone.style.cssText = `
+            position: fixed;
+            left: ${item.getBoundingClientRect().left}px;
+            top: ${item.getBoundingClientRect().top}px;
+            width: ${item.offsetWidth}px;
+            opacity: 0.75;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            transition: none;
+        `;
+        document.body.appendChild(touchClone);
+        item.style.opacity = "0.3";
+    }, { passive: false });
+
+    document.addEventListener("touchmove", (e) => {
+        if (!touchDragging) return;
+        e.preventDefault();
+
+        const touch = e.touches[0];
+
+        // Move the clone
+        touchClone.style.top = (touch.clientY - touchClone.offsetHeight / 2) + "px";
+
+        // Auto-scroll
+        const speed = getScrollSpeed(touch.clientY);
+        stopScroll();
+        if (speed !== 0) {
+            function step() {
+                window.scrollBy(0, speed);
+                scrollInterval = requestAnimationFrame(step);
+            }
+            scrollInterval = requestAnimationFrame(step);
+        }
+
+        // Find drop target
+        touchClone.style.display = "none";
+        const elBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+        touchClone.style.display = "";
+
+        const targetItem = elBelow?.closest(".item");
+        if (targetItem && targetItem !== touchDragging) {
+            const targetIndex = parseInt(targetItem.dataset.index);
+            const fromIndex   = parseInt(touchDragging.dataset.index);
+            const box = targetItem.getBoundingClientRect();
+            const midY = box.top + box.height / 2;
+
+            // Reorder in DOM visually by swapping dataset indices
+            // (actual data reorder happens on touchend)
+            if (touch.clientY < midY) {
+                container.insertBefore(touchDragging, targetItem);
+            } else {
+                container.insertBefore(touchDragging, targetItem.nextSibling);
+            }
+
+            // Re-number dataset indices so subsequent moves stay accurate
+            [...container.querySelectorAll(".item")].forEach((el, i) => {
+                el.dataset.index = data.indexOf(
+                    data[parseInt(el.dataset.index)] // keep existing data ref
+                );
+            });
+        }
+    }, { passive: false });
+
+    document.addEventListener("touchend", () => {
+        if (!touchDragging) return;
+        stopScroll();
+
+        if (touchClone) {
+            touchClone.remove();
+            touchClone = null;
+        }
+        touchDragging.style.opacity = "";
+        touchDragging = null;
+
+        // Commit new order to data
+        const newOrder = [...container.querySelectorAll(".item")].map(el =>
+            data[el.dataset.index]
+        );
+        data = newOrder;
+        saveData();
+        render();
+    });
 }
 
 enableAutoScroll(list);
