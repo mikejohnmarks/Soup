@@ -70,6 +70,19 @@
         width: 100%;
         box-sizing: border-box;
     }
+	
+	textarea {
+		padding: 8px;
+		border-radius: 8px;
+		border: 1px solid #ccc;
+		font-size: 14px;
+		width: 100%;
+		box-sizing: border-box;
+		resize: none;
+		min-height: 38px;
+		font-family: inherit;
+		overflow: hidden;
+	}
 
     .handle {
         font-size: 18px;
@@ -146,15 +159,20 @@ function render() {
                     ${index === 0 ? '👑 ' : ''}
                     ${item.name}
                 </div>
-                <input type="text" placeholder="Add note..." value="${item.note}">
+                <textarea placeholder="Add note...">${item.note}</textarea>
                 <div class="handle">☰</div>
             </div>
         `;
 
-        const input = div.querySelector("input");
-        input.addEventListener("input", (e) => {
-            data[index].note = e.target.value;
-        });
+        const textarea = div.querySelector("textarea");
+
+		textarea.addEventListener("input", (e) => {
+			data[index].note = e.target.value;
+
+			// auto resize
+			textarea.style.height = "auto";
+			textarea.style.height = textarea.scrollHeight + "px";
+		});
 
         div.addEventListener("dragstart", () => {
             div.classList.add("dragging");
@@ -166,6 +184,10 @@ function render() {
         });
 
         list.appendChild(div);
+		setTimeout(() => {
+    textarea.style.height = "auto";
+    textarea.style.height = textarea.scrollHeight + "px";
+}, 0);
     });
 }
 
