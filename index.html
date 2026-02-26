@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reorder List App</title>
+
+<style>
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        background: #f4f4f4;
+        margin: 0;
+        padding: 15px;
+    }
+
+    h1 {
+        text-align: center;
+        font-size: 20px;
+    }
+
+    #list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .item {
+        background: white;
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        touch-action: none;
+        transition: background 0.2s ease;
+    }
+
+    .item.first {
+        background: linear-gradient(135deg, #ffd700, #ffec8b);
+        border: 2px solid #e6c200;
+    }
+
+    .item.dragging {
+        opacity: 0.5;
+    }
+
+    .title {
+        font-weight: 600;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .crown {
+        font-size: 18px;
+    }
+
+    input {
+        padding: 8px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        font-size: 14px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .handle {
+        font-size: 18px;
+        cursor: grab;
+        align-self: flex-end;
+        opacity: 0.5;
+    }
+</style>
+</head>
+
+<body>
+
+<h1>Reorderable Restaurant List</h1>
+<div id="list"></div>
+
+<script>
+const defaultData = [
+"Café du Jour",
+"St. John the Baptist Ukrainian Catholic Church",
+"Twelve Whiskey Barbecue",
+"Mario’s South Side Saloon",
+"Bedford House PGH",
+"Sushi Tomo",
+"Carmella’s Plates & Pints",
+"Lin’s Asian Fusion",
+"Le Petit Café & Grille",
+"La Palapa",
+"Cold Friends Kitchen",
+"Dive Bar & Grille",
+"Piper’s Pub",
+"La Dolce Vita",
+"Thai Me Up",
+"The Library on Carson",
+"The Speckled Egg",
+"Burghers Brewing",
+"The Fluted Mushroom"
+].map(name => ({ name, note: "" }));
+
+let data = JSON.parse(localStorage.getItem("restaurantData")) || defaultData;
+
+const list = document.getElementById("list");
+
+function render() {
+    list.innerHTML = "";
+
+    data.forEach((item, index) => {
+        const div = document.createElement("div");
+        div.className = "item";
+        if (index === 0) div.classList.add("first");
+
+        div.draggable = true;
+        div.dataset.index = index;
+
+        div.innerHTML = `
+            <div class="title">
+                ${index === 0 ? '<span class="crown">👑</span>' : ''}
+                ${item.name}
+            </div>
+            <input type="text" placeholder="Add note..." value="${item.note}">
+            <div class="handle">☰</div>
+        `;
+
+        const input = div.querySelector("input");
+        input.addEventListener("input", (e) => {
+            data[index].note = e.target.value;
+        });
+
+        div.addEventListener("dragstart", () => {
+            div.classList.add("dragging");
+        });
+
+        div.addEventListener("dragend", () => {
+            div.classList.remove("dragging");
+            saveData();
+        });
+
+        list.appendChild(div);
+    });
+}
+
+function getDragAfterElement(y) {
+    const draggableElements = [...document.querySelectorAll('.item:not(.dragging)')];
+
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+list.addEventListener("dragover", e => {
+    e.preventDefault();
+    const afterElement = getDragAfterElement(e.clientY);
+    const dragging = document.querySelector(".dragging");
+    if (!dragging) return;
+
+    if (afterElement == null) {
+        list.appendChild(dragging);
+    } else {
+        list.insertBefore(dragging, afterElement);
+    }
+});
+
+list.addEventListener("drop", () => {
+    const newOrder = [...document.querySelectorAll(".item")].map(item =>
+        data[item.dataset.index]
+    );
+    data = newOrder;
+    render();
+    saveData();
+});
+
+function saveData() {
+    localStorage.setItem("restaurantData", JSON.stringify(data));
+}
+
+// Auto save every minute
+setInterval(saveData, 60000);
+
+render();
+</script>
+
+</body>
+</html>
