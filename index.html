@@ -144,12 +144,16 @@ const defaultData = [
 "The Speckled Egg",
 "Burghers Brewing",
 "The Fluted Mushroom"
-].map(name => ({ name, soup: "", note: "" }));
+].map(name => ({ name, soup: "", note: "", veggie: false, unique: false}));
 
 let saved = JSON.parse(localStorage.getItem("restaurantData"));
-let data = saved?.data || defaultData;
-let veggieIndex = saved?.veggieIndex ?? null;
-let uniqueIndex = saved?.uniqueIndex ?? null;
+let data = (saved?.data || defaultData).map(item => ({
+    name: item.name,
+    soup: item.soup ?? "",
+    note: item.note ?? "",
+    veggie: item.veggie ?? false,
+    unique: item.unique ?? false
+}));
 
 const list = document.getElementById("list");
 
@@ -173,8 +177,8 @@ function render() {
                 <div class="title-row">
                     <div class="title">${index === 0 ? '👑 ' : ''}${item.name}</div>
                     <div class="emoji-group">
-                        <span class="emoji veggie ${veggieIndex === index ? 'selected' : ''}">🥦</span>
-                        <span class="emoji unique ${uniqueIndex === index ? 'selected' : ''}">⭐</span>
+                        <span class="emoji veggie ${item.veggie ? 'selected' : ''}">🥦</span>
+						<span class="emoji unique ${item.unique ? 'selected' : ''}">⭐</span>
                     </div>
                 </div>
 
@@ -204,17 +208,33 @@ function render() {
 
         autoResize(textarea);
 
-        div.querySelector(".veggie").addEventListener("click", () => {
-            veggieIndex = veggieIndex === index ? null : index;
-            saveData();
-            render();
-        });
+        // Veggie logic
+		div.querySelector(".veggie").addEventListener("click", () => {
+			const isSelected = item.veggie;
 
-        div.querySelector(".unique").addEventListener("click", () => {
-            uniqueIndex = uniqueIndex === index ? null : index;
-            saveData();
-            render();
-        });
+			// Clear veggie from all
+			data.forEach(d => d.veggie = false);
+
+			// Toggle current
+			item.veggie = !isSelected;
+
+			saveData();
+			render();
+		});
+
+		// Unique logic
+		div.querySelector(".unique").addEventListener("click", () => {
+			const isSelected = item.unique;
+
+			// Clear unique from all
+			data.forEach(d => d.unique = false);
+
+			// Toggle current
+			item.unique = !isSelected;
+
+			saveData();
+			render();
+		});
 
         div.addEventListener("dragstart", () => div.classList.add("dragging"));
         div.addEventListener("dragend", () => {
@@ -267,9 +287,7 @@ list.addEventListener("drop", () => {
 
 function saveData() {
     localStorage.setItem("restaurantData", JSON.stringify({
-        data,
-        veggieIndex,
-        uniqueIndex
+        data
     }));
 }
 
