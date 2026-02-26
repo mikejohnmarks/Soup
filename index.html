@@ -174,6 +174,50 @@ let data = (saved?.data || defaultData).map(item => ({
 
 const list = document.getElementById("list");
 
+let autoScrollInterval = null;
+
+function enableAutoScroll(container) {
+console.log("enabling");
+    container.addEventListener("dragover", (e) => {
+        const threshold = 80; // px from top/bottom
+        const scrollSpeed = 8; // speed
+
+        const rect = container.getBoundingClientRect();
+        const y = e.clientY;
+
+        // Near top
+        if (y < rect.top + threshold) {
+            startScrolling(container, -scrollSpeed);
+        }
+        // Near bottom
+        else if (y > rect.bottom - threshold) {
+            startScrolling(container, scrollSpeed);
+        }
+        else {
+            stopScrolling();
+        }
+    });
+
+    container.addEventListener("dragleave", stopScrolling);
+    container.addEventListener("drop", stopScrolling);
+    container.addEventListener("dragend", stopScrolling);
+}
+
+function startScrolling(container, speed) {
+console.log("scrolling");
+    if (autoScrollInterval) return;
+
+    autoScrollInterval = setInterval(() => {
+        container.scrollTop += speed;
+    }, 16); // ~60fps
+}
+
+function stopScrolling() {
+console.log("stopping");
+    clearInterval(autoScrollInterval);
+    autoScrollInterval = null;
+}
+
 function render() {
     list.innerHTML = "";
 /*<button class="delete-btn">🗑</button>*/
@@ -372,6 +416,7 @@ function saveData() {
     }));
 }
 
+enableAutoScroll(list);
 setInterval(saveData, 60000);
 render();
 </script>
