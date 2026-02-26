@@ -27,7 +27,6 @@
 
     .item {
         display: flex;
-        align-items: stretch;
         background: white;
         border-radius: 12px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.08);
@@ -54,35 +53,46 @@
         gap: 8px;
     }
 
+    .title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
     .title {
         font-weight: 600;
         font-size: 16px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
     }
 
-    input {
+    .emoji-group {
+        display: flex;
+        gap: 10px;
+        font-size: 18px;
+        cursor: pointer;
+    }
+
+    .emoji {
+        opacity: 0.4;
+        transition: 0.2s ease;
+    }
+
+    .emoji.selected {
+        opacity: 1;
+        transform: scale(1.2);
+    }
+
+    textarea {
         padding: 8px;
         border-radius: 8px;
         border: 1px solid #ccc;
         font-size: 14px;
         width: 100%;
         box-sizing: border-box;
+        resize: none;
+        min-height: 38px;
+        font-family: inherit;
+        overflow: hidden;
     }
-	
-	textarea {
-		padding: 8px;
-		border-radius: 8px;
-		border: 1px solid #ccc;
-		font-size: 14px;
-		width: 100%;
-		box-sizing: border-box;
-		resize: none;
-		min-height: 38px;
-		font-family: inherit;
-		overflow: hidden;
-	}
 
     .handle {
         font-size: 18px;
@@ -103,13 +113,12 @@
     .dragging {
         opacity: 0.5;
     }
-
 </style>
 </head>
 
 <body>
 
-<h1>South Side Soup Contest</h1>
+<h1>Southside Soup Contest</h1>
 <div id="list"></div>
 
 <script>
@@ -135,7 +144,12 @@ const defaultData = [
 "The Fluted Mushroom"
 ].map(name => ({ name, note: "" }));
 
-let data = JSON.parse(localStorage.getItem("restaurantData")) || defaultData;
+let saved = JSON.parse(localStorage.getItem("restaurantData"));
+
+let data = saved?.data || defaultData;
+let veggieIndex = saved?.veggieIndex ?? null;
+let uniqueIndex = saved?.uniqueIndex ?? null;
+
 const list = document.getElementById("list");
 
 function render() {
@@ -155,9 +169,12 @@ function render() {
         div.innerHTML = `
             <div class="rank">${index + 1}</div>
             <div class="content">
-                <div class="title">
-                    ${index === 0 ? '👑 ' : ''}
-                    ${item.name}
+                <div class="title-row">
+                    <div class="title">${index === 0 ? '👑 ' : ''}${item.name}</div>
+                    <div class="emoji-group">
+                        <span class="emoji veggie ${veggieIndex === index ? 'selected' : ''}">🥦</span>
+                        <span class="emoji unique ${uniqueIndex === index ? 'selected' : ''}">⭐</span>
+                    </div>
                 </div>
                 <textarea placeholder="Add note...">${item.note}</textarea>
                 <div class="handle">☰</div>
@@ -165,30 +182,39 @@ function render() {
         `;
 
         const textarea = div.querySelector("textarea");
-
-		textarea.addEventListener("input", (e) => {
-			data[index].note = e.target.value;
-
-			// auto resize
-			textarea.style.height = "auto";
-			textarea.style.height = textarea.scrollHeight + "px";
-		});
-
-        div.addEventListener("dragstart", () => {
-            div.classList.add("dragging");
+        textarea.addEventListener("input", (e) => {
+            data[index].note = e.target.value;
+            autoResize(textarea);
         });
 
+        autoResize(textarea);
+
+        // Emoji logic
+        div.querySelector(".veggie").addEventListener("click", () => {
+            veggieIndex = veggieIndex === index ? null : index;
+            saveData();
+            render();
+        });
+
+        div.querySelector(".unique").addEventListener("click", () => {
+            uniqueIndex = uniqueIndex === index ? null : index;
+            saveData();
+            render();
+        });
+
+        div.addEventListener("dragstart", () => div.classList.add("dragging"));
         div.addEventListener("dragend", () => {
             div.classList.remove("dragging");
             saveData();
         });
 
         list.appendChild(div);
-		setTimeout(() => {
-    textarea.style.height = "auto";
-    textarea.style.height = textarea.scrollHeight + "px";
-}, 0);
     });
+}
+
+function autoResize(el) {
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
 }
 
 function getDragAfterElement(y) {
@@ -211,24 +237,31 @@ list.addEventListener("dragover", e => {
     const dragging = document.querySelector(".dragging");
     if (!dragging) return;
 
-    if (afterElement == null) {
-        list.appendChild(dragging);
-    } else {
-        list.insertBefore(dragging, afterElement);
-    }
+    if (afterElement == null) list.appendChild(dragging);
+    else list.insertBefore(dragging, afterElement);
 });
 
 list.addEventListener("drop", () => {
     const newOrder = [...document.querySelectorAll(".item")].map(item =>
         data[item.dataset.index]
     );
+
     data = newOrder;
-    render();
+
+    // Update emoji indexes after reorder
+    veggieIndex = data.findIndex((_, i) => i === veggieIndex);
+    uniqueIndex = data.findIndex((_, i) => i === uniqueIndex);
+
     saveData();
+    render();
 });
 
 function saveData() {
-    localStorage.setItem("restaurantData", JSON.stringify(data));
+    localStorage.setItem("restaurantData", JSON.stringify({
+        data,
+        veggieIndex,
+        uniqueIndex
+    }));
 }
 
 setInterval(saveData, 60000);
