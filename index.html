@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golf Tracker</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 10px;
+        background: #f5f5f5;
+    }
+
+    .container {
+        max-width: 520px;
+        margin: auto;
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    h1, h2 {
+        text-align: center;
+    }
+
+    button {
+        padding: 10px;
+        border: none;
+        border-radius: 8px;
+        background: #2e7d32;
+        color: white;
+        font-size: 14px;
+        cursor: pointer;
+    }
+
+    input, select, textarea {
+        width: 98%;
+        padding: 10px;
+        margin-top: 6px;
+        margin-bottom: 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        font-size: 14px;
+    }
+
+    label {
+        font-weight: bold;
+        font-size: 14px;
+    }
+
+    .hidden { display: none; }
+
+    /* Horizontal hole nav */
+    .hole-nav {
+        display: flex;
+        overflow-x: auto;
+        margin-bottom: 10px;
+    }
+
+    .hole-btn {
+        min-width: 40px;
+        margin-right: 5px;
+        background: #ccc;
+        color: black;
+    }
+
+    .active-hole {
+        background: #2e7d32;
+        color: white;
+    }
+
+    .summary {
+        background: #eee;
+        padding: 10px;
+        border-radius: 8px;
+        margin-top: 10px;
+    }
+	.scorecard {
+    overflow-x: auto;
+    margin-bottom: 10px;
+}
+
+.scorecard table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    text-align: center;
+}
+
+.scorecard th, .scorecard td {
+    border: 1px solid #ccc;
+    padding: 6px;
+}
+
+.scorecard th {
+    background: #eee;
+}
+
+.total-cell {
+    font-weight: bold;
+    background: #ddd;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- START -->
+    <div id="startScreen">
+        <h1>Golf Tracker</h1>
+        <button onclick="startRound('front')">Front 9</button>
+        <button onclick="startRound('back')">Back 9</button>
+        <button onclick="resumeRound()">Resume Saved Round</button>
+    </div>
+
+    <!-- HOLE -->
+    <div id="holeScreen" class="hidden">
+
+        <div class="hole-nav" id="holeNav"></div>
+		
+		<div class="scorecard" id="scorecard"></div>
+
+        <h2 id="holeTitle"></h2>
+
+        <label>Par</label>
+        <input id="par" type="number">
+
+        <label>Tee Club</label>
+        <input id="teeClub">
+
+        <label>Tee Result</label>
+        <select id="teeResult">
+            <option value="">Select</option>
+            <option>Fairway</option>
+            <option>Left Rough</option>
+            <option>Right Rough</option>
+            <option>OB</option>
+            <option>Hazard</option>
+        </select>
+
+        <label>Fairway Hit</label>
+        <select id="fairway">
+            <option value="">Select</option>
+            <option>Yes</option>
+            <option>No</option>
+        </select>
+
+        <label>GIR</label>
+        <select id="gir">
+            <option value="">Select</option>
+            <option>Yes</option>
+            <option>No</option>
+        </select>
+
+        <label>Putts</label>
+        <input id="putts" type="number">
+
+        <label>Score</label>
+        <input id="score" type="number">
+
+        <label>Notes</label>
+        <textarea id="notes"></textarea>
+		<button onclick="saveHole()">Save Hole</button>
+        <button onclick="finishRound()">Finish Round</button>
+
+        <div class="summary" id="summary"></div>
+    </div>
+
+    <!-- FINISH -->
+    <div id="finishScreen" class="hidden">
+		<div class="hole-nav" id="holeNav"></div>
+        <h2>Round Complete</h2>
+		<button onclick="back()">Back</button>
+        <button onclick="downloadJSON()">Download JSON</button>
+        <button onclick="clearStorage()">Clear Saved Data</button>
+    </div>
+
+</div>
+
+<script>
+let holes = [];
+let holeNumbers = [];
+let currentHoleIndex = 0;
+
+function startRound(type) {
+    holeNumbers = type === 'front'
+        ? [1,2,3,4,5,6,7,8,9]
+        : [10,11,12,13,14,15,16,17,18];
+
+    holes = holeNumbers.map(h => ({ hole: h }));
+    currentHoleIndex = 0;
+
+    showHoleScreen();
+    renderNav();
+    loadHole();
+    saveToStorage();
+}
+
+function resumeRound() {
+    const saved = localStorage.getItem("golfRound");
+    if (!saved) return alert("No saved round");
+
+    const data = JSON.parse(saved);
+    holes = data.holes;
+    holeNumbers = data.holeNumbers;
+    currentHoleIndex = data.currentHoleIndex || 0;
+
+    showHoleScreen();
+    renderNav();
+    loadHole();
+}
+
+function showHoleScreen() {
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('holeScreen').classList.remove('hidden');
+}
+
+function renderNav() {
+    const nav = document.getElementById('holeNav');
+    nav.innerHTML = "";
+
+    holeNumbers.forEach((h, i) => {
+        const btn = document.createElement("button");
+        btn.innerText = h;
+        btn.className = "hole-btn";
+        if (i === currentHoleIndex) btn.classList.add("active-hole");
+
+        btn.onclick = () => {
+            saveHole();
+            currentHoleIndex = i;
+            loadHole();
+            renderNav();
+        };
+
+        nav.appendChild(btn);
+    });
+}
+
+function loadHole() {
+    const h = holes[currentHoleIndex];
+
+    document.getElementById('holeTitle').innerText = "Hole " + h.hole;
+
+    document.getElementById('par').value = h.par || "";
+    document.getElementById('teeClub').value = h.teeClub || "";
+    document.getElementById('teeResult').value = h.teeResult || "";
+    document.getElementById('fairway').value = h.fairway || "";
+    document.getElementById('gir').value = h.gir || "";
+    document.getElementById('putts').value = h.putts || "";
+    document.getElementById('score').value = h.score || "";
+    document.getElementById('notes').value = h.notes || "";
+
+    updateSummary();
+	renderScorecard();
+}
+
+function saveHole() {
+    const h = holes[currentHoleIndex];
+
+    h.par = Number(document.getElementById('par').value);
+    h.teeClub = document.getElementById('teeClub').value;
+    h.teeResult = document.getElementById('teeResult').value;
+    h.fairway = document.getElementById('fairway').value;
+    h.gir = document.getElementById('gir').value;
+    h.putts = Number(document.getElementById('putts').value);
+    h.score = Number(document.getElementById('score').value);
+    h.notes = document.getElementById('notes').value;
+
+    saveToStorage();
+	renderScorecard();
+}
+
+
+function updateSummary() {
+    let totalScore = 0;
+    let totalPar = 0;
+
+    holes.forEach(h => {
+        if (h.score) totalScore += h.score;
+        if (h.par) totalPar += h.par;
+    });
+
+    const diff = totalScore - totalPar;
+
+    document.getElementById('summary').innerHTML = `
+        <strong>Total Score:</strong> ${totalScore || 0}<br>
+        <strong>Total Par:</strong> ${totalPar || 0}<br>
+        <strong>+/-:</strong> ${diff > 0 ? "+" + diff : diff}
+    `;
+}
+
+function finishRound() {
+
+    saveHole(); // make sure current hole is saved
+
+    document.getElementById('holeScreen').classList.add('hidden');
+	
+    document.getElementById('finishScreen').classList.remove('hidden');
+}
+
+function back() {
+
+    saveHole(); // make sure current hole is saved
+
+    document.getElementById('holeScreen').classList.remove('hidden');
+	
+    document.getElementById('finishScreen').classList.add('hidden');
+}
+function saveToStorage() {
+    localStorage.setItem("golfRound", JSON.stringify({
+        holes,
+        holeNumbers,
+        currentHoleIndex
+    }));
+}
+
+function clearStorage() {
+    localStorage.removeItem("golfRound");
+    location.reload();
+}
+
+function downloadJSON() {
+    const dataStr = JSON.stringify(holes, null, 2);
+    const blob = new Blob([dataStr], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "golf_round.json";
+    a.click();
+
+    URL.revokeObjectURL(url);
+
+
+}
+
+function renderScorecard() {
+    let parTotal = 0;
+    let scoreTotal = 0;
+
+    let holesRow = '<tr><th>Hole</th>';
+    let parRow = '<tr><th>Par</th>';
+    let scoreRow = '<tr><th>Score</th>';
+    let diffRow = '<tr><th>+/-</th>';
+
+    holes.forEach(h => {
+        const par = h.par || 0;
+        const score = h.score || 0;
+        const diff = score && par ? score - par : "";
+
+        if (par) parTotal += par;
+        if (score) scoreTotal += score;
+
+        holesRow += `<td>${h.hole}</td>`;
+        parRow += `<td>${par || ""}</td>`;
+        scoreRow += `<td>${score || ""}</td>`;
+        diffRow += `<td>${diff !== "" ? (diff > 0 ? "+" + diff : diff) : ""}</td>`;
+    });
+
+    const totalDiff = scoreTotal - parTotal;
+
+    holesRow += `<td class="total-cell">TOT</td></tr>`;
+    parRow += `<td class="total-cell">${parTotal}</td></tr>`;
+    scoreRow += `<td class="total-cell">${scoreTotal}</td></tr>`;
+    diffRow += `<td class="total-cell">${totalDiff > 0 ? "+" + totalDiff : totalDiff}</td></tr>`;
+
+    document.getElementById("scorecard").innerHTML = `
+        <table>
+            ${holesRow}
+            ${parRow}
+            ${scoreRow}
+            ${diffRow}
+        </table>
+    `;
+}
+</script>
+
+</body>
+</html>
